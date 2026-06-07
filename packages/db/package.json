@@ -12,8 +12,11 @@
     "postinstall": "prisma generate",
     "clean": "rm -rf dist node_modules/.prisma"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.8.0"
   },
