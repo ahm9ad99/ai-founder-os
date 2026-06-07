@@ -10,7 +10,8 @@ const patchSchema = z.object({
 })
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = auth()
+  try {
+    const { userId } = auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({ where: { clerkId: userId } })
@@ -33,10 +34,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   if (!review) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ data: review })
+  } catch (error) {
+    console.error('GET /api/code-review/[id]:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = auth()
+  try {
+    const { userId } = auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({ where: { clerkId: userId } })
@@ -67,4 +73,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   })
 
   return NextResponse.json({ data: updated })
+  } catch (error) {
+    console.error('PATCH /api/code-review/[id]:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

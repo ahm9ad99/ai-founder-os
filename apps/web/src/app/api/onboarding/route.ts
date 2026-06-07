@@ -15,20 +15,21 @@ const onboardingSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const body = await req.json()
-  const parsed = onboardingSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
-  }
-
-  const data = parsed.data
-
   try {
+    const { userId } = auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const parsed = onboardingSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const data = parsed.data
+
+    try {
     await clerkClient.users.updateUser(userId, {
       publicMetadata: { onboardingComplete: true, role: data.role },
     })
@@ -58,4 +59,8 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, redirectTo: '/dashboard' })
+  } catch (error) {
+    console.error('POST /api/onboarding:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

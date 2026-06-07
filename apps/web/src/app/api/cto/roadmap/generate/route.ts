@@ -3,53 +3,54 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@ai-founder/db'
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const { userId } = auth()
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const orgMember = await prisma.organizationMember.findFirst({ where: { userId: user.id } })
-  if (!orgMember) return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    const orgMember = await prisma.organizationMember.findFirst({ where: { userId: user.id } })
+    if (!orgMember) return NextResponse.json({ error: 'No organization found' }, { status: 404 })
 
-  const json = await req.json()
-  const { sessionId, instructions } = json
+    const json = await req.json()
+    const { sessionId, instructions } = json
 
-  if (!sessionId) {
-    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
-  }
+    if (!sessionId) {
+      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
+    }
 
-  const session = await prisma.cTOSession.findUnique({
-    where: { id: sessionId },
-    include: { messages: { orderBy: { createdAt: 'asc' } } },
-  })
+    const session = await prisma.cTOSession.findUnique({
+      where: { id: sessionId },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+    })
 
-  if (!session) {
-    return NextResponse.json({ error: 'Session not found' }, { status: 404 })
-  }
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
 
-  if (session.organizationId !== orgMember.organizationId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+    if (session.organizationId !== orgMember.organizationId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
-  const conversationContext = session.messages
-    .map((m) => `${m.role === 'USER' ? 'User' : 'AI CTO'}: ${m.content}`)
-    .join('\n\n')
+    const conversationContext = session.messages
+      .map((m) => `${m.role === 'USER' ? 'User' : 'AI CTO'}: ${m.content}`)
+      .join('\n\n')
 
-  let milestones: Array<{
-    title: string
-    description: string
-    quarter: string
-    status: string
-    techTags: string[]
-    effort: string
-    order: number
-  }>
+    let milestones: Array<{
+      title: string
+      description: string
+      quarter: string
+      status: string
+      techTags: string[]
+      effort: string
+      order: number
+    }>
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.ANTHROPIC_API_KEY
 
-  if (apiKey) {
-    try {
+    if (apiKey) {
+      try {
       const { default: Anthropic } = await import('@anthropic-ai/sdk')
       const anthropic = new Anthropic({ apiKey })
       const msg = await anthropic.messages.create({
@@ -90,6 +91,10 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json({ data: roadmap }, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/cto/roadmap/generate:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 function getDefaultMilestones(title: string) {

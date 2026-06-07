@@ -3,7 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@ai-founder/db'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = auth()
+  try {
+    const { userId } = auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({ where: { clerkId: userId } })
@@ -114,4 +115,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       'Content-Disposition': `attachment; filename="review-${params.id}.html"`,
     },
   })
+  } catch (error) {
+    console.error('GET /api/code-review/[id]/report:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

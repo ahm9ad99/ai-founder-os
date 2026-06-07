@@ -35,7 +35,8 @@ The project shows a moderate security posture with a health score of **72/100**.
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth()
+  try {
+    const { userId } = auth()
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -159,4 +160,8 @@ Respond with this exact JSON shape:
   })
 
   return NextResponse.json({ data: audit }, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/projects/[id]/audit:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

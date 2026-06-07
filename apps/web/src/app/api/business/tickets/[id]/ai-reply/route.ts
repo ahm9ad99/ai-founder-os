@@ -8,46 +8,47 @@ const anthropic = new Anthropic({
 })
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  try {
+    const { userId } = auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  }
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-  const orgMember = await prisma.organizationMember.findFirst({
-    where: { userId: user.id },
-    include: { organization: { include: { subscription: true } } },
-  })
-  if (!orgMember) {
-    return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-  }
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: user.id },
+      include: { organization: { include: { subscription: true } } },
+    })
+    if (!orgMember) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    }
 
-  const ticket = await prisma.customerTicket.findFirst({
-    where: { id: params.id, organizationId: orgMember.organizationId },
-    include: {
-      messages: { orderBy: { createdAt: 'asc' } },
-    },
-  })
-  if (!ticket) {
-    return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
-  }
+    const ticket = await prisma.customerTicket.findFirst({
+      where: { id: params.id, organizationId: orgMember.organizationId },
+      include: {
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
+    })
+    if (!ticket) {
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+    }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: 'AI reply is not configured. Set ANTHROPIC_API_KEY.' },
-      { status: 503 },
-    )
-  }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        { error: 'AI reply is not configured. Set ANTHROPIC_API_KEY.' },
+        { status: 503 },
+      )
+    }
 
-  const conversationHistory = ticket.messages.map(m =>
-    `${m.role === 'USER' ? 'Customer' : 'Assistant'}: ${m.content}`
-  ).join('\n')
+    const conversationHistory = ticket.messages.map(m =>
+      `${m.role === 'USER' ? 'Customer' : 'Assistant'}: ${m.content}`
+    ).join('\n')
 
-  const prompt = `You are a support agent for AI Founder OS, a SaaS platform. 
+    const prompt = `You are a support agent for AI Founder OS, a SaaS platform. 
 Respond helpfully and professionally to the following customer ticket.
 
 Ticket subject: ${ticket.subject}
@@ -58,7 +59,7 @@ ${conversationHistory || 'No previous messages.'}
 
 Write a helpful reply addressing the customer's concerns. Keep it concise and actionable.`
 
-  try {
+    try {
     const msg = await anthropic.messages.create({
       model: 'claude-3-sonnet-20241022',
       max_tokens: 1024,
@@ -85,5 +86,9 @@ Write a helpful reply addressing the customer's concerns. Keep it concise and ac
       { error: 'Failed to generate AI reply', message: error.message },
       { status: 500 },
     )
+  }
+  } catch (error) {
+    console.error('POST /api/business/tickets/[id]/ai-reply:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

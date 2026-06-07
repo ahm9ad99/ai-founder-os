@@ -3,64 +3,70 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@ai-founder/db'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const { userId } = auth()
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const session = await prisma.cTOSession.findUnique({ where: { id: params.id } })
-  if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    const session = await prisma.cTOSession.findUnique({ where: { id: params.id } })
+    if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
-  const orgMember = await prisma.organizationMember.findFirst({
-    where: { userId: user.id, organizationId: session.organizationId },
-  })
-  if (!orgMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: user.id, organizationId: session.organizationId },
+    })
+    if (!orgMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data = await prisma.cTOMessage.findMany({
-    where: { sessionId: params.id },
-    orderBy: { createdAt: 'asc' },
-  })
+    const data = await prisma.cTOMessage.findMany({
+      where: { sessionId: params.id },
+      orderBy: { createdAt: 'asc' },
+    })
 
-  return NextResponse.json({ data })
+    return NextResponse.json({ data })
+  } catch (error) {
+    console.error('GET /api/cto/sessions/[id]/messages:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const { userId } = auth()
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const session = await prisma.cTOSession.findUnique({ where: { id: params.id } })
-  if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    const session = await prisma.cTOSession.findUnique({ where: { id: params.id } })
+    if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
-  const orgMember = await prisma.organizationMember.findFirst({
-    where: { userId: user.id, organizationId: session.organizationId },
-  })
-  if (!orgMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: user.id, organizationId: session.organizationId },
+    })
+    if (!orgMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const json = await req.json()
-  const { content } = json
+    const json = await req.json()
+    const { content } = json
 
-  if (!content || !content.trim()) {
-    return NextResponse.json({ error: 'Content is required' }, { status: 400 })
-  }
+    if (!content || !content.trim()) {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    }
 
-  const userMessage = await prisma.cTOMessage.create({
-    data: { sessionId: params.id, role: 'USER', content: content.trim() },
-  })
+    const userMessage = await prisma.cTOMessage.create({
+      data: { sessionId: params.id, role: 'USER', content: content.trim() },
+    })
 
-  const previousMessages = await prisma.cTOMessage.findMany({
-    where: { sessionId: params.id },
-    orderBy: { createdAt: 'asc' },
-  })
+    const previousMessages = await prisma.cTOMessage.findMany({
+      where: { sessionId: params.id },
+      orderBy: { createdAt: 'asc' },
+    })
 
-  let aiReply: string
-  const apiKey = process.env.ANTHROPIC_API_KEY
+    let aiReply: string
+    const apiKey = process.env.ANTHROPIC_API_KEY
 
-  if (apiKey) {
-    try {
+    if (apiKey) {
+      try {
       const { default: Anthropic } = await import('@anthropic-ai/sdk')
       const anthropic = new Anthropic({ apiKey })
       const msg = await anthropic.messages.create({
@@ -85,6 +91,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   })
 
   return NextResponse.json({ data: [userMessage, aiMessage] }, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/cto/sessions/[id]/messages:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 function fallbackAiReply(userContent: string): string {

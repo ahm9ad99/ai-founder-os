@@ -20,37 +20,38 @@ function scoreColor(s: number | null): string {
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  try {
+    const { userId } = auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } })
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  }
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-  const orgMember = await prisma.organizationMember.findFirst({
-    where: { userId: user.id },
-  })
-  if (!orgMember) {
-    return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-  }
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: user.id },
+    })
+    if (!orgMember) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    }
 
-  const project = await prisma.project.findFirst({
-    where: { id: params.id, organizationId: orgMember.organizationId },
-    include: {
-      audits: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        include: { vulns: true, deps: true, perf: true },
+    const project = await prisma.project.findFirst({
+      where: { id: params.id, organizationId: orgMember.organizationId },
+      include: {
+        audits: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: { vulns: true, deps: true, perf: true },
+        },
       },
-    },
-  })
+    })
 
-  if (!project || project.audits.length === 0) {
-    return NextResponse.json({ error: 'No audit data found' }, { status: 404 })
-  }
+    if (!project || project.audits.length === 0) {
+      return NextResponse.json({ error: 'No audit data found' }, { status: 404 })
+    }
 
   const audit = project.audits[0]!
   const hc = audit.healthScore
@@ -165,4 +166,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       'Content-Disposition': `attachment; filename="audit-${project.name.replace(/[^a-zA-Z0-9]/g, '-')}.html"`,
     },
   })
+  } catch (error) {
+    console.error('GET /api/projects/[id]/report:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
