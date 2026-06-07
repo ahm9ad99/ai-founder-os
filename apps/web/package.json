@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "cd ../../packages/db && prisma generate && cd - && next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .turbo .next node_modules"

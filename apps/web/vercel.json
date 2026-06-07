@@ -1,6 +1,6 @@
 {
   "installCommand": "npm install -g pnpm && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter web build",
+  "buildCommand": "cd ../../packages/db && npx prisma generate && cd ../../apps/web && pnpm build",
   "outputDirectory": ".next",
   "framework": "nextjs"
 }
