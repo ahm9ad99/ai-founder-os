@@ -12,8 +12,8 @@ const features = [
 
 const pricing = [
   { name: 'Free', price: '$0', desc: 'Perfect for getting started', features: ['3 AI agents', '10K tokens/day', '1 team seat', 'Basic code review', 'Community support'], cta: 'Start Free', href: '/sign-up', popular: false },
-  { name: 'Business', price: '$49', desc: 'For growing teams', features: ['50 AI agents', '500K tokens/day', '25 team seats', 'Advanced code review', 'AI CTO platform', 'Priority support', 'Custom integrations'], cta: 'Start Trial', href: '/sign-up', popular: true },
-  { name: 'Enterprise', price: '$199', desc: 'For scaling organizations', features: ['Unlimited agents', 'Unlimited tokens', 'Unlimited team seats', 'All features', 'Custom SLA', 'Dedicated infrastructure', 'White-label option'], cta: 'Contact Us', href: '/sign-up', popular: false },
+  { name: 'Business', price: '$0', desc: 'For growing teams', features: ['50 AI agents', '500K tokens/day', '25 team seats', 'Advanced code review', 'AI CTO platform', 'Priority support', 'Custom integrations'], cta: 'Get Started Free', href: '/sign-up', popular: false },
+  { name: 'Enterprise', price: '$0', desc: 'For scaling organizations', features: ['Unlimited agents', 'Unlimited tokens', 'Unlimited team seats', 'All features', 'Custom SLA', 'Dedicated infrastructure', 'White-label option'], cta: 'Get Started Free', href: '/sign-up', popular: false },
 ]
 
 const faqs = [
@@ -120,7 +120,7 @@ export default function LandingPage() {
       <section id="pricing" className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-          <p className="text-slate-400 text-lg">Start free, upgrade as you grow.</p>
+          <p className="text-slate-400 text-lg">All plans are completely free. No credit card required.</p>
         </div>
         <div className="grid gap-8 lg:grid-cols-3 max-w-5xl mx-auto">
           {pricing.map((plan) => (
